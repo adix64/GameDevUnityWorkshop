@@ -11,11 +11,14 @@ public class MovePlayer : MonoBehaviour
     public float jumpPower = 2f;
     CapsuleCollider capsule;
     Rigidbody rigidbody;
-    const float intersectionThreshold = 0.001f;
-
+    Vector3 moveDir;
+    [Range(0f, 2f)]
+    public float intersectionThreshold = 0.001f;
+    Animator animator;
     // Apelata o singura data, la initializare
     void Start()
     {
+        animator = GetComponent<Animator>();
         rigidbody = GetComponent<Rigidbody>();
         capsule = GetComponent<CapsuleCollider>();
         cameraTransform = Camera.main.transform;
@@ -24,13 +27,65 @@ public class MovePlayer : MonoBehaviour
 
     void Update() //apelata de N ori pe secunda, preferabil N > 60FPS, in general N fluctuant
     {
-        Vector3 moveDir = GetMovementAxes();
+        moveDir = GetMovementAxes();
 
-        ApplyRootMotion(moveDir);
+        ApplyRootMotion();
+
+        ApplyRootRotation();
 
         HandleJump();
 
         HandleFallenOffPlatform();
+
+        UpdateAnimatorParams();
+
+        HandleAttack();
+    }
+
+    private void HandleAttack()
+    {
+        if (Input.GetButtonDown("Fire1"))
+            animator.SetTrigger("attack");
+    }
+
+    private void UpdateAnimatorParams()
+    {
+        //trece din spatiu lume in spatiul personaj
+        Vector3 characterSpaceDir = transform.InverseTransformDirection(moveDir);
+
+        if (Input.GetKey(KeyCode.LeftShift))
+        {// walk speed
+            characterSpaceDir *= 0.5f;
+        }
+        animator.SetFloat("forward", characterSpaceDir.z, 0.2f, Time.deltaTime);
+        animator.SetFloat("right", characterSpaceDir.x, 0.2f, Time.deltaTime);
+        animator.SetFloat("timeSinceTakeoff", animator.GetFloat("timeSinceTakeoff") + Time.deltaTime);
+    }
+    private void ApplyRootRotation()
+    {
+        var stateNfo = animator.GetCurrentAnimatorStateInfo(0);
+        if (stateNfo.IsTag("attack"))
+            return;
+
+        if (animator.GetBool("jump"))
+            return;
+        Vector3 D = moveDir;
+        Vector3 F = transform.forward;
+        Vector3 FplusD = F + D;
+        Vector3 FminusD = F - D;
+
+        if (FplusD.magnitude > 0.001f && FminusD.magnitude > 0.001f)
+        {//rotim cu unghiul dat de dot product in jurul axei cross product ca sa alinem 2 directii
+            float u = Mathf.Acos(Vector3.Dot(D, F));
+            u *= Mathf.Rad2Deg;
+            Vector3 axis = Vector3.Cross(F, D);
+            transform.rotation = Quaternion.AngleAxis(u * .25f, axis) * transform.rotation;
+        }
+
+        if (FminusD.magnitude < 0.001)
+        {
+            transform.rotation = Quaternion.AngleAxis(2f, transform.up) * transform.rotation;
+        }
     }
 
     private void HandleFallenOffPlatform()
@@ -41,16 +96,24 @@ public class MovePlayer : MonoBehaviour
 
     private void HandleJump()
     {
-        Ray ray = new Ray(transform.position, Vector3.down); // raza incepe in centrul capsulei, se duce in jos
-        float maxDist = capsule.height * 0.5f + intersectionThreshold; //foarte aproape de sol
+        // raza incepe de la baza talpilor, se duce in jos
+        Ray ray = new Ray(transform.position + Vector3.up * intersectionThreshold, Vector3.down);
+        float maxDist = 2f * intersectionThreshold; //foarte aproape de sol
         if (Physics.Raycast(ray, maxDist))
-        {// daca are loc intersectia
+        {// daca are loc intersectia, e pe sol
+            animator.SetBool("jump", false);
+
             if (Input.GetKeyDown(KeyCode.Space))
             {// sari
-                Vector3 jumpVec = Vector3.up * jumpPower;
-                rigidbody.AddForce(jumpVec, ForceMode.VelocityChange);
+                Vector3 jumpVelocity = (Vector3.up + moveDir) * jumpPower;
+                //setam directia in care sare pentru a fi folosita in state machine behaviour
+                animator.SetFloat("jumpDirX", jumpVelocity.x);
+                animator.SetFloat("jumpDirY", jumpVelocity.y);
+                animator.SetFloat("jumpDirZ", jumpVelocity.z);
+                animator.SetTrigger("jumpTakeoff");//declanseaza decolarea
             }
-        }
+        }else 
+            animator.SetBool("jump", true); // midair
     }
     private Vector3 GetMovementAxes()
     {
@@ -64,12 +127,19 @@ public class MovePlayer : MonoBehaviour
         return moveDir;
     }
 
-    private void ApplyRootMotion(Vector3 moveDir)
+    private void ApplyRootMotion()
     {
+        if (animator.GetBool("jump"))
+        { // nu rotim in timp ce sare
+            animator.applyRootMotion = false; // nu imprima root motion in aer
+            return;
+        }
+        animator.applyRootMotion = true;
         // pentru suprascrierea directa a pozitiei, daca nu aveam Rigidbody:
             //transform.position += moveDir * Time.fixedDeltaTime * speed;
         float velY = rigidbody.velocity.y; // retinem viteza pe axa verticala
-        rigidbody.velocity = moveDir * speed; // ii dam viteza in functie de directia deplasarii
+        //rigidbody.velocity = moveDir * speed; // ii dam viteza in functie de directia deplasarii
+        rigidbody.velocity = animator.deltaPosition / Time.deltaTime;
         rigidbody.velocity = new Vector3(rigidbody.velocity.x,
                                          velY, //pastram viteza pe axa verticala
                                          rigidbody.velocity.z); 
