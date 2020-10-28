@@ -24,7 +24,8 @@ public class HoldWeaponScript : MonoBehaviour
 
         if (Input.GetButton("Fire2") && stateNfo.IsTag("grounded"))
         {
-            weapon.gameObject.SetActive(true);
+            weapon.gameObject.SetActive(true); // face arma vizibila
+            //pune arma in liniile personajului
             weapon.transform.position = rightHand.position;
             weapon.transform.rotation = rightHand.rotation;
             if (Input.GetButtonDown("Fire1"))
@@ -36,7 +37,7 @@ public class HoldWeaponScript : MonoBehaviour
         }
         else
         {
-            weapon.gameObject.SetActive(false);
+            weapon.gameObject.SetActive(false); // face arma invizibila
         }
     }
 }
