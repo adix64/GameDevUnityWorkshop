@@ -12,7 +12,8 @@ public class CameraCtrl : MonoBehaviour
     public float maxPitch = 45f;
 
     public Vector3 cameraOffset; // deplasamentul camerei relativ la centru
-    
+    public Vector3 aimDownSightsCameraOffset; // deplasamentul camerei relativ la centru pentru aim
+    public Animator animator;
     // LateUpdate este apelat intr-un frame dupa ce Update a fost apelat pe toate obiectele
     void LateUpdate()
     {
@@ -24,8 +25,11 @@ public class CameraCtrl : MonoBehaviour
 
         transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
 
+        Vector3 finalCamOffset = Vector3.Lerp(cameraOffset, aimDownSightsCameraOffset, animator.GetLayerWeight(1));
                             //de la pozitia playerului, ne dam in spate distToPlayer unitati
         transform.position = player.position - transform.forward * distToPlayer
-                            + transform.TransformVector(cameraOffset);//offset exprimat in spatiul camera, pentru over the shoulder look
+                            + transform.TransformVector(finalCamOffset);//offset exprimat in spatiul camera, pentru over the shoulder look
+    
+    
     }
 }

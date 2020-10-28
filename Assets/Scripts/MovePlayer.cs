@@ -15,6 +15,9 @@ public class MovePlayer : MonoBehaviour
     [Range(0f, 2f)]
     public float intersectionThreshold = 0.001f;
     Animator animator;
+    public float averageVelocity = 0f;
+    public float velocityBlendSpeed = 10f;
+    Transform chestTransform;
     // Apelata o singura data, la initializare
     void Start()
     {
@@ -23,6 +26,8 @@ public class MovePlayer : MonoBehaviour
         capsule = GetComponent<CapsuleCollider>();
         cameraTransform = Camera.main.transform;
         initPos = transform.position;
+        chestTransform = animator.GetBoneTransform(HumanBodyBones.Chest);
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     void Update() //apelata de N ori pe secunda, preferabil N > 60FPS, in general N fluctuant
@@ -40,11 +45,21 @@ public class MovePlayer : MonoBehaviour
         UpdateAnimatorParams();
 
         HandleAttack();
-    }
 
+
+    }
+    private void LateUpdate()
+    {
+        if (animator.GetLayerWeight(1) > 0.5f)
+        {
+            //se uita la 50 metri inainte
+            chestTransform.LookAt(cameraTransform.position + cameraTransform.forward * 50f);
+        }
+        
+    }
     private void HandleAttack()
     {
-        if (Input.GetButtonDown("Fire1"))
+        if (Input.GetButtonDown("Fire1") && !Input.GetButton("Fire2"))
             animator.SetTrigger("attack");
     }
 
@@ -70,6 +85,13 @@ public class MovePlayer : MonoBehaviour
         if (animator.GetBool("jump"))
             return;
         Vector3 D = moveDir;
+
+        if (animator.GetLayerWeight(1) > 0.5f) //daca tinteste
+        {
+            D = cameraTransform.forward;
+            D.y = 0f;
+            D = D.normalized;
+        }
         Vector3 F = transform.forward;
         Vector3 FplusD = F + D;
         Vector3 FminusD = F - D;
@@ -112,8 +134,14 @@ public class MovePlayer : MonoBehaviour
                 animator.SetFloat("jumpDirZ", jumpVelocity.z);
                 animator.SetTrigger("jumpTakeoff");//declanseaza decolarea
             }
-        }else 
-            animator.SetBool("jump", true); // midair
+        }
+        else
+        {
+            if(averageVelocity < 10e-5f) //epsilon
+                animator.SetBool("jump", false); // sta pe loc
+            else
+                animator.SetBool("jump", true); // midair
+        }
     }
     private Vector3 GetMovementAxes()
     {
@@ -129,6 +157,7 @@ public class MovePlayer : MonoBehaviour
 
     private void ApplyRootMotion()
     {
+        averageVelocity = Mathf.Lerp(averageVelocity, rigidbody.velocity.magnitude, Time.deltaTime * velocityBlendSpeed);
         if (animator.GetBool("jump"))
         { // nu rotim in timp ce sare
             animator.applyRootMotion = false; // nu imprima root motion in aer
@@ -142,6 +171,7 @@ public class MovePlayer : MonoBehaviour
         rigidbody.velocity = animator.deltaPosition / Time.deltaTime;
         rigidbody.velocity = new Vector3(rigidbody.velocity.x,
                                          velY, //pastram viteza pe axa verticala
-                                         rigidbody.velocity.z); 
+                                         rigidbody.velocity.z);
+
     }
 }
