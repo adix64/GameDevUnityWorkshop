@@ -7,6 +7,8 @@ public class HoldWeaponScript : MonoBehaviour
     Animator animator;
     public Transform weapon;
     public Transform weaponTip;
+    public Transform weaponHandle;
+    public Transform weaponElbowHint;
     Transform rightHand;
 
     public GameObject projectile;
@@ -28,8 +30,17 @@ public class HoldWeaponScript : MonoBehaviour
             //pune arma in liniile personajului
             weapon.transform.position = rightHand.position;
             weapon.transform.rotation = rightHand.rotation;
+            //salvam in animator pozitia manerului armei
+            animator.SetFloat("weaponHandleX", weaponHandle.position.x);
+            animator.SetFloat("weaponHandleY", weaponHandle.position.y);
+            animator.SetFloat("weaponHandleZ", weaponHandle.position.z);
+
+            //salvam in animator hint pozitia cotului 
+            animator.SetFloat("weaponElbowHintX", weaponElbowHint.position.x);
+            animator.SetFloat("weaponElbowHintY", weaponElbowHint.position.y);
+            animator.SetFloat("weaponElbowHintZ", weaponElbowHint.position.z);
             if (Input.GetButtonDown("Fire1"))
-            {
+            {// se instantiaza proiectil, SHOOT
                 GameObject projectileGO = GameObject.Instantiate(projectile);
                 projectileGO.transform.position = weaponTip.position;
                 projectileGO.transform.rotation = weaponTip.rotation;

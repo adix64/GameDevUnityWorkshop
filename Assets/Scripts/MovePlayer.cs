@@ -18,6 +18,9 @@ public class MovePlayer : MonoBehaviour
     public float averageVelocity = 0f;
     public float velocityBlendSpeed = 10f;
     Transform chestTransform;
+    public Transform enemyContainer;
+    public Transform[] enemies; 
+
     // Apelata o singura data, la initializare
     void Start()
     {
@@ -28,6 +31,10 @@ public class MovePlayer : MonoBehaviour
         initPos = transform.position;
         chestTransform = animator.GetBoneTransform(HumanBodyBones.Chest);
         Cursor.lockState = CursorLockMode.Locked;
+        enemies = new Transform[enemyContainer.childCount];
+
+        for (int i = 0; i < enemyContainer.childCount; i++)
+            enemies[i] = enemyContainer.GetChild(i);
     }
 
     void Update() //apelata de N ori pe secunda, preferabil N > 60FPS, in general N fluctuant
@@ -84,14 +91,7 @@ public class MovePlayer : MonoBehaviour
 
         if (animator.GetBool("jump"))
             return;
-        Vector3 D = moveDir;
-
-        if (animator.GetLayerWeight(1) > 0.5f) //daca tinteste
-        {
-            D = cameraTransform.forward;
-            D.y = 0f;
-            D = D.normalized;
-        }
+        Vector3 D = ComputeLookDirection();
         Vector3 F = transform.forward;
         Vector3 FplusD = F + D;
         Vector3 FminusD = F - D;
@@ -108,6 +108,42 @@ public class MovePlayer : MonoBehaviour
         {
             transform.rotation = Quaternion.AngleAxis(2f, transform.up) * transform.rotation;
         }
+
+       
+        transform.rotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y, 0);
+    }
+
+    private Vector3 ComputeLookDirection()
+    {
+        Vector3 D = moveDir;
+
+        if (animator.GetLayerWeight(1) > 0.5f) //daca tinteste
+        {
+            D = cameraTransform.forward;
+            D.y = 0f;
+            D = D.normalized;
+        }
+
+        float minDist = 999999f;
+        int closestEnemyIndex = -1;
+        for (int i = 0; i < enemies.Length; i++)
+        {
+            float distToEnemy = Vector3.Distance(transform.position, enemies[i].position);
+            if (distToEnemy < minDist && distToEnemy < 4f)
+            {
+                minDist = distToEnemy;
+                closestEnemyIndex = i;
+            }
+        }
+        if (closestEnemyIndex != -1)
+        {
+            D = (enemies[closestEnemyIndex].position - transform.position);
+            D.y = 0;
+            D = D.normalized;
+        }
+
+
+        return D;
     }
 
     private void HandleFallenOffPlatform()
