@@ -14,9 +14,12 @@ public class CameraCtrl : MonoBehaviour
     public Vector3 cameraOffset; // deplasamentul camerei relativ la centru
     public Vector3 aimDownSightsCameraOffset; // deplasamentul camerei relativ la centru pentru aim
     public Animator animator;
+    public PauseGameCtrl gamePauseCtrl;
     // LateUpdate este apelat intr-un frame dupa ce Update a fost apelat pe toate obiectele
     void LateUpdate()
     {
+        if (gamePauseCtrl.gamePaused)
+            return;
         yaw += Input.GetAxis("Mouse X");
         pitch -= Input.GetAxis("Mouse Y");
 
@@ -25,7 +28,8 @@ public class CameraCtrl : MonoBehaviour
 
         transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
 
-        Vector3 finalCamOffset = Vector3.Lerp(cameraOffset, aimDownSightsCameraOffset, animator.GetLayerWeight(1));
+        float blendF = animator.GetLayerWeight(1) * (animator.GetBool("aiming") ? 1f : 0f);
+        Vector3 finalCamOffset = Vector3.Lerp(cameraOffset, aimDownSightsCameraOffset, blendF);
                             //de la pozitia playerului, ne dam in spate distToPlayer unitati
         transform.position = player.position - transform.forward * distToPlayer
                             + transform.TransformVector(finalCamOffset);//offset exprimat in spatiul camera, pentru over the shoulder look

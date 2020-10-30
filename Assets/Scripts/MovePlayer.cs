@@ -17,9 +17,9 @@ public class MovePlayer : MonoBehaviour
     Animator animator;
     public float averageVelocity = 0f;
     public float velocityBlendSpeed = 10f;
-    Transform chestTransform;
+    Transform headTransform;
     public Transform enemyContainer;
-    public Transform[] enemies; 
+    public List<Transform> enemies; 
 
     // Apelata o singura data, la initializare
     void Start()
@@ -29,12 +29,14 @@ public class MovePlayer : MonoBehaviour
         capsule = GetComponent<CapsuleCollider>();
         cameraTransform = Camera.main.transform;
         initPos = transform.position;
-        chestTransform = animator.GetBoneTransform(HumanBodyBones.Chest);
+        headTransform = animator.GetBoneTransform(HumanBodyBones.Head);
         Cursor.lockState = CursorLockMode.Locked;
-        enemies = new Transform[enemyContainer.childCount];
+        enemies = new List<Transform>();
 
         for (int i = 0; i < enemyContainer.childCount; i++)
-            enemies[i] = enemyContainer.GetChild(i);
+            enemies.Add(enemyContainer.GetChild(i));
+
+        Time.timeScale = 1f;
     }
 
     void Update() //apelata de N ori pe secunda, preferabil N > 60FPS, in general N fluctuant
@@ -57,15 +59,16 @@ public class MovePlayer : MonoBehaviour
     }
     private void LateUpdate()
     {
-        if (animator.GetLayerWeight(1) > 0.5f)
+        if (animator.GetBool("aiming"))
         {
             //se uita la 50 metri inainte
-            chestTransform.LookAt(cameraTransform.position + cameraTransform.forward * 50f);
+            headTransform.LookAt(cameraTransform.position + cameraTransform.forward * 50f);
         }
-        
+
     }
     private void HandleAttack()
     {
+
         if (Input.GetButtonDown("Fire1") && !Input.GetButton("Fire2"))
             animator.SetTrigger("attack");
     }
@@ -117,7 +120,7 @@ public class MovePlayer : MonoBehaviour
     {
         Vector3 D = moveDir;
 
-        if (animator.GetLayerWeight(1) > 0.5f) //daca tinteste
+        if (animator.GetBool("aiming")) //daca tinteste
         {
             D = cameraTransform.forward;
             D.y = 0f;
@@ -126,7 +129,7 @@ public class MovePlayer : MonoBehaviour
 
         float minDist = 999999f;
         int closestEnemyIndex = -1;
-        for (int i = 0; i < enemies.Length; i++)
+        for (int i = 0; i < enemies.Count; i++)
         {
             float distToEnemy = Vector3.Distance(transform.position, enemies[i].position);
             if (distToEnemy < minDist && distToEnemy < 4f)
@@ -135,6 +138,9 @@ public class MovePlayer : MonoBehaviour
                 closestEnemyIndex = i;
             }
         }
+
+        animator.SetFloat("distToClosestEnemy", minDist);
+
         if (closestEnemyIndex != -1)
         {
             D = (enemies[closestEnemyIndex].position - transform.position);
@@ -149,7 +155,7 @@ public class MovePlayer : MonoBehaviour
     private void HandleFallenOffPlatform()
     {
         if (transform.position.y < minYthreshold)
-            rigidbody.position = initPos;
+            animator.SetInteger("HP", -1);
     }
 
     private void HandleJump()

@@ -8,7 +8,6 @@ public class HoldWeaponScript : MonoBehaviour
     public Transform weapon;
     public Transform weaponTip;
     public Transform weaponHandle;
-    public Transform weaponElbowHint;
     Transform rightHand;
 
     public GameObject projectile;
@@ -26,6 +25,7 @@ public class HoldWeaponScript : MonoBehaviour
 
         if (Input.GetButton("Fire2") && stateNfo.IsTag("grounded"))
         {
+            animator.SetBool("aiming", true);
             weapon.gameObject.SetActive(true); // face arma vizibila
             //pune arma in liniile personajului
             weapon.transform.position = rightHand.position;
@@ -35,10 +35,6 @@ public class HoldWeaponScript : MonoBehaviour
             animator.SetFloat("weaponHandleY", weaponHandle.position.y);
             animator.SetFloat("weaponHandleZ", weaponHandle.position.z);
 
-            //salvam in animator hint pozitia cotului 
-            animator.SetFloat("weaponElbowHintX", weaponElbowHint.position.x);
-            animator.SetFloat("weaponElbowHintY", weaponElbowHint.position.y);
-            animator.SetFloat("weaponElbowHintZ", weaponElbowHint.position.z);
             if (Input.GetButtonDown("Fire1"))
             {// se instantiaza proiectil, SHOOT
                 GameObject projectileGO = GameObject.Instantiate(projectile);
@@ -48,6 +44,7 @@ public class HoldWeaponScript : MonoBehaviour
         }
         else
         {
+            animator.SetBool("aiming", false);
             weapon.gameObject.SetActive(false); // face arma invizibila
         }
     }

@@ -17,11 +17,18 @@ public class GroundedBhvr : StateMachineBehaviour
         float weaponLayerWeight = animator.GetLayerWeight(1); // layer 0 e Base Layer, layer e HoldWeaponLYR
         float blendFactor;
 
-        if (Input.GetButton("Fire2")) // tinteste activand influenta layer-ului HoldWeaponLYR din animator
+        if (animator.GetBool("aiming")) // tinteste activand influenta layer-ului HoldWeaponLYR din animator
             blendFactor = Mathf.Lerp(weaponLayerWeight, 1, Time.deltaTime * blendSpeed);
         else ///  ......... dezactivand ............... daca nu tinteste:
-            blendFactor = Mathf.Lerp(weaponLayerWeight, 0, Time.deltaTime * blendSpeed); 
+            blendFactor = Mathf.Lerp(weaponLayerWeight, 0, Time.deltaTime * blendSpeed);
 
+
+        float distToClosestEnemy = animator.GetFloat("distToClosestEnemy");
+        distToClosestEnemy = Mathf.Clamp(distToClosestEnemy, 2f, 4f); // [2, 4]
+        distToClosestEnemy -= 2f; //[0, 2]
+        distToClosestEnemy *= 0.5f; //[0, 1]
+        float guardBlendFactor = 1f - distToClosestEnemy;
+        blendFactor = Mathf.Max(blendFactor, guardBlendFactor);
         animator.SetLayerWeight(1, blendFactor);
     }
 
@@ -29,6 +36,8 @@ public class GroundedBhvr : StateMachineBehaviour
     override public void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
         animator.SetLayerWeight(1, 0f);
+        animator.SetIKRotationWeight(AvatarIKGoal.RightHand, 0f);
+        animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 0);
     }
 
     // OnStateMove is called right after Animator.OnAnimatorMove()
@@ -40,30 +49,25 @@ public class GroundedBhvr : StateMachineBehaviour
     // OnStateIK is called right after Animator.OnAnimatorIK()
     override public void OnStateIK(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
-        if (animator.GetLayerWeight(1) > 0.5f) // tinteste
+        if (animator.GetBool("aiming")) // tinteste
         {
             Quaternion rotation = Quaternion.LookRotation(Camera.main.transform.forward,
                                                           Camera.main.transform.right); //rotatia mainii drepte (armei) aliniata la camera
-            animator.SetIKRotation(AvatarIKGoal.RightHand, rotation);
+            //setare mana dreapta
             animator.SetIKRotationWeight(AvatarIKGoal.RightHand, 0.5f); // jumatate din IK driving
-            animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 1f);  // mana stanga full IK pentru pozitionare pe maner arma
-            animator.SetIKHintPositionWeight(AvatarIKHint.LeftElbow, 0.5f); // hint pentru cotul stang orientat corect
-            Transform rightHand = animator.GetBoneTransform(HumanBodyBones.RightHand);
+            animator.SetIKRotation(AvatarIKGoal.RightHand, rotation);
+
             Vector3 weaponHandle = new Vector3(animator.GetFloat("weaponHandleX"), // pozitia manerului armei
                                                animator.GetFloat("weaponHandleY"),
                                                animator.GetFloat("weaponHandleZ"));
-            Vector3 weaponElbowHint =  new Vector3(animator.GetFloat("weaponElbowHintX"), //hint pozitia cotului
-                                                   animator.GetFloat("weaponElbowHintY"),
-                                                   animator.GetFloat("weaponElbowHintZ"));
-            //setare pozitie mana stanga:
+            //setare mana stanga:
+            animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 1f);  // mana stanga full IK pentru pozitionare pe maner arma
             animator.SetIKPosition(AvatarIKGoal.LeftHand, weaponHandle);
-            animator.SetIKHintPosition(AvatarIKHint.LeftElbow, weaponElbowHint);
         }
         else
         {// scoate IK cand nu se tinteste
             animator.SetIKRotationWeight(AvatarIKGoal.RightHand, 0f);
             animator.SetIKPositionWeight(AvatarIKGoal.LeftHand, 0);
-            animator.SetIKHintPositionWeight(AvatarIKHint.LeftElbow, 0);
         }
     }
 }
